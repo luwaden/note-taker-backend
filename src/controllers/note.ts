@@ -96,6 +96,11 @@ export const updateNote = async (
     }
     res.status(200).json({
       message: "New Update to the note made succesfully",
+      data: {
+        title: updateNote?.title,
+        content: updateNote?.content,
+        updatedAt: updateNote?.updatedAt,
+      },
     });
   } catch (err) {
     res.status(500).json({
