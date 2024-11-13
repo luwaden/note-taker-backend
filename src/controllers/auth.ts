@@ -1,4 +1,9 @@
-import express, { Request, Response, NextFunction } from "express";
+import express, {
+  Request,
+  Response,
+  NextFunction,
+  RequestHandler,
+} from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model";
@@ -8,70 +13,105 @@ export interface RegisterRequestBody {
   email: string;
   password: string;
   userName: string;
-  phoneNumber: string;
+  phoneNumber: number;
 }
 
-export const userRegister = async (
+export const userRegister: RequestHandler = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   const { email, password, userName, phoneNumber } =
     req.body as RegisterRequestBody;
+
   if (!email || !password || !userName) {
     res.status(400).json({
       status: "400",
       error: "Bad request",
-      message: "email, password and username are required",
+      message: "email, password, and username are required",
     });
+    return;
   }
+
   try {
-    await User.create({ email, password, userName, phoneNumber });
-    res.status(201).json({ message: "A new user successfully created" });
+    // Check if the user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      res.status(409).json({
+        error: true,
+        message:
+          "A user with this email already exists. Please log in or use a different email.",
+      });
+      return;
+    }
+
+    // Hash the password
+    // const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create the new user
+    await User.create({
+      email,
+      password,
+      userName,
+      phoneNumber,
+    });
+
+    res.status(201).json({
+      message: "A new user successfully created",
+      data: { email, userName },
+    });
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: true, message: "Internal server error" });
   }
 };
 
-export const userLogin = async (
+export const userLogin: RequestHandler = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   const { email, password } = req.body;
-  let token: string = "",
-    user: IUser | null = null;
+  let token = "";
+  let user: IUser | null = null;
+
   try {
+    // Check for the JWT_SECRET environment variable
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      res
+        .status(500)
+        .json({ error: true, message: "JWT_SECRET is not defined" });
+      return;
+    }
     // Find user by email
     user = await User.findOne({ email });
     if (!user) {
-      throw new Error("user does not exist");
+      res.status(400).json({ error: true, message: "User does not exist" });
+      return;
     }
-    // Compare password
+    // Compare passwords
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    // console.log(user.password);
+    // console.log(password);
+    // console.log(isPasswordValid);
+
     if (!isPasswordValid) {
-      throw new Error("invalid password");
+      res.status(400).json({ error: true, message: "Invalid password" });
+      return;
     }
 
-    // Generate a JWT token for authentication
-    token = jwt.sign(
-      { id: user._id, email: user.email },
-      process.env.JWT_SECRET || "",
-      { expiresIn: process.env.JWT_EXPIRE }
-    );
-  } catch (err) {
-    // Catch any errors and return 500 respone
-    throw new Error(`Error: ${err}`);
+    // Generate a JWT token
+    token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRE,
+    });
+    res.status(200).json({
+      error: false,
+      data: token,
+      message: "Login successful",
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ error: true, message: "Internal server error" });
   }
-
-  // Send success response with token
-  res.status(200).json({
-    error: false,
-    data: {
-      _id: user?._id,
-      email: user?.email,
-    },
-    token,
-    message: "Login successful",
-  });
 };

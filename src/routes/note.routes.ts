@@ -7,13 +7,14 @@ import {
   notePost,
   updateNote,
 } from "../controllers/note";
+import authMiddleware from "../middleware/authorization.mw";
 const router = Router();
 
 router.post("/notes", notePost);
 
-router.get("/notes", noteGet);
+router.get("/notes", authMiddleware, noteGet);
 
-router.get("/notes/:id", getOneNote);
+router.get("/notes/:id", authMiddleware, getOneNote);
 
 router.put("/notes/:id", updateNote);
 

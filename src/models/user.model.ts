@@ -11,13 +11,16 @@ const userschema = new Schema<IUser>({
 
 userschema.pre("save", async function (next) {
   const user = this as IUser;
+
   if (!user.isModified("password")) {
     return next();
   }
 
   try {
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(user.password, salt);
+    const hashedPassword = await bcrypt.hash(user.password, 10);
+    // console.log(hashedPassword);
+
     user.password = hashedPassword;
     next();
   } catch (err) {

@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import { INote } from "../utils/note.interface";
 import Note from "../models/note.model";
+import { create } from "domain";
 
 export const notePost = async (
   req: Request,
@@ -19,7 +20,12 @@ export const notePost = async (
     }
     res.status(201).json({
       message: "Note successfully created",
-      data: note,
+      data: {
+        _id: note._id,
+        title: note.title,
+        content: note.content,
+        createdAt: note.createdAt,
+      },
     });
   } catch (err) {
     throw new Error(`Error: ${err}`);
@@ -33,7 +39,6 @@ export const noteGet = async (
 ) => {
   try {
     const notes = await Note.find();
-
     if (!notes) {
       throw new Error("No notes found");
     }
@@ -58,9 +63,7 @@ export const getOneNote = async (
   try {
     const notes = await Note.findById(noteId);
     if (!notes) {
-      res.status(404).json({
-        message: "Note not found",
-      });
+      throw new Error("Note not found");
     }
     console.log(notes);
 
@@ -85,14 +88,12 @@ export const updateNote = async (
   try {
     const updateNote = await Note.findByIdAndUpdate(
       noteId,
-      { title, content },
+      { title, content, updatedAt: Date.now },
       { new: true, runValidators: true }
     );
     console.log(updateNote);
     if (!updateNote) {
-      res.status(404).json({
-        message: "Note not found",
-      });
+      throw new Error("Invalid entry");
     }
     res.status(200).json({
       message: "New Update to the note made succesfully",
@@ -118,9 +119,7 @@ export const deleteNote = async (
   try {
     const deletedNote = await Note.findByIdAndDelete(noteId);
     if (!deletedNote) {
-      res.status(404).json({
-        message: "Note not found",
-      });
+      throw new Error("Invalid entry");
     }
 
     res.status(200).json({
