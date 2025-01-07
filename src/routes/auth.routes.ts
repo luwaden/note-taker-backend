@@ -1,7 +1,8 @@
 import express, { Router, Request, Response, NextFunction } from "express";
 import User from "../models/user.model";
 
-import { userLogin, userRegister } from "../controllers/auth";
+import { userLogin, userRegister, verifyEmail } from "../controllers/auth";
+import authMiddleware from "../middleware/authorization.mw";
 
 const router = Router();
 
@@ -12,5 +13,6 @@ interface LoginRequestBody {
 
 router.post("/register", userRegister);
 
-router.post("/login", userLogin);
+router.post("/login", authMiddleware, userLogin);
+router.get("/verify-email/:token", verifyEmail);
 export default router;

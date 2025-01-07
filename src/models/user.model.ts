@@ -6,7 +6,9 @@ const userschema = new Schema<IUser>({
   email: { type: String, unique: true, required: true },
   password: { type: String, required: true },
   userName: { type: String, required: true },
+  isVerified: { type: Boolean, required: false, default: false },
   phoneNumber: { type: String, required: false },
+  createdAt: { type: Date, default: Date.now },
 });
 
 userschema.pre("save", async function (next) {
